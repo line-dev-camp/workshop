@@ -22,13 +22,14 @@ exports.getProfile = async (userId) => {
     });
 
     if (response.status === 200) {
+      console.log(`[getProfile] : ${response.data} `);
       return response.data;
     } else {
       throw new Error(`Failed to fetch user profile. API responded with status: ${response.status}`);
     }
   } catch (error) {
     console.error('Error fetching user profile:', error.response ? error.response.data : error.message);
-    throw error; // Rethrow the error after logging it or handle it accordingly
+    throw error;
   }
 };
 
@@ -62,6 +63,7 @@ exports.replyWithLongLived = async (token, payload) => {
   }
 };
 
+/*Reply messsage with stateless token*/
 exports.replyWithStateless = async (token, payload) => {
   try {
     const accessToken = await issueStatelessAccessToken();
@@ -116,20 +118,21 @@ async function issueStatelessAccessToken() {
     });
 
     if (response.status === 200 && response.data && response.data.access_token) {
+      console.log(`[issueStatelessAccessToken] : ${response.data} `);
       return response.data.access_token;
     } else {
-      // Consider handling different status codes and responses accordingly
       throw new Error('Failed to obtain access token, check response for details.');
     }
   } catch (error) {
     console.error('Error issuing token:', error.message);
-    throw error; // rethrow the error after logging it or handle it as needed
+    throw error;
   }
 }
 
 /*
 #verify-signature
 https://developers.line.biz/en/docs/messaging-api/receiving-messages/#verify-signature
+https://medium.com/linedevth/7a94d9548f34
 
 When your bot server receives a request, verify the request sender. To make sure the request is from the LINE Platform, make your bot server verify the signature in the x-line-signature request header.
 */

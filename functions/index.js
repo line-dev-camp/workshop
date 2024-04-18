@@ -1,18 +1,19 @@
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onRequest } = require("firebase-functions/v2/https");
-
 setGlobalOptions({
     region: "asia-northeast1",
     memory: "1GB",
     concurrency: 40,
 })
 
+const line = require('./util/line.util');
+const dialogflow = require('./util/dialogflow.util');
+const flex = require('./message/flex');
 
 exports.helloWorld = onRequest((request, response) => {
     response.send("Hello from Firebase!");
 });
 
-/*
 function validateWebhook(request, response) {
     if (request.method !== "POST") {
         return response.status(405).send("Method Not Allowed");
@@ -22,73 +23,199 @@ function validateWebhook(request, response) {
         return response.status(401).send("Unauthorized");
     }
 }
-*/
 
-exports.webhook = onRequest((request, response) => {
-    // validateWebhook(request, response)
+exports.webhook = onRequest(async (request, response) => {
+    validateWebhook(request, response)
     const events = request.body.events
 
     for (const event of events) {
+
+        let profile = {}
+
         switch (event.type) {
+
             case "follow":
-                // greeting message 
-                // new friend or old friend
+                /*
+                    Greeting Message for new friend
+                */
+                profile = await line.getProfile(event.source.userId)
+                let text = `ยินดีต้อนรับคุณ ${profile.displayName} คุณสามารถพูดคุย สนทนากับ admin ได้เลย`
+                if (event.follow.isUnblocked) {
+                    /*
+                        Greeting Message for Old Friend
+                        https://developers.line.biz/en/reference/messaging-api/#follow-event
+                        https://linedevth.line.me/th/knowledge-api/follow-event
+                    */
+                    text = `ยินดีต้อนการกลับมา ${profile.displayName} คุณสบายดีไหม`
+                }
+                await line.replyWithLongLived(event.replyToken, [{
+                    "type": "text",
+                    "text": text,
+                }])
                 break;
             case "unfollow":
-                // write to log json
+                /*
+                    Unsend event
+                    https://developers.line.biz/en/reference/messaging-api/#unsend-event
+                */
+                console.log(JSON.stringify(event));
                 break;
             case "message":
-                // reply message with longlive
-                // reply flex message
-                // reply message with stateless
-                // check message out group
-                // check message in group
+                 /*
+                    Message
+                    https://developers.line.biz/en/reference/messaging-api/#message-event
+                */
+                if (event.message.type === "text") {
+
+                    let textMessage = event.message.text
+
+                    if (textMessage === "1") {
+
+                        await line.replyWithLongLived(event.replyToken, [{
+                            "type": "text",
+                            "text": JSON.stringify(event),
+                        }])
+
+                    } else if (textMessage === "2") {
+
+                        await line.replyWithStateless(event.replyToken, [{
+                            "type": "text",
+                            "text": JSON.stringify(event),
+                        }])
+
+                    } else if (textMessage === "3") {
+
+                        await line.replyWithStateless(event.replyToken, [flex.exampleFlex()])
+
+                    } else if (textMessage === "4") {
+                        
+                        profile = await line.getProfile(event.source.userId)
+                        await line.replyWithStateless(event.replyToken, [flex.examplePostback(JSON.stringify(profile))])
+
+                    } else if (textMessage === "สวัสดี") {
+
+                        await line.replyWithStateless(event.replyToken, [{
+                            "type": "text",
+                            "text": `สวัสดี`,
+                            "quickReply": {
+                                "items": [{
+                                    "type": "action",
+                                    "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "สวัสดี",
+                                        "text": "สวัสดี"
+                                    }
+                                }]
+                            }
+                        }])
+
+                    } else {
+                        /* Foward to Dialogflow */
+                        await dialogflow.postToDialogflow(request)
+                    }
+
+                } else {
+                    /*
+                    # Handle Other Message Type
+                    - Image : https://developers.line.biz/en/reference/messaging-api/#image-message
+                    - Video : https://developers.line.biz/en/reference/messaging-api/#video-message
+                    - Audio : https://developers.line.biz/en/reference/messaging-api/#audio-message
+                    - Location : https://developers.line.biz/en/reference/messaging-api/#location-message
+                    - Sticker : https://developers.line.biz/en/reference/messaging-api/#sticker-message
+                    */
+                    await line.replyWithLongLived(event.replyToken, [{
+                        "type": "text",
+                        "text": JSON.stringify(event),
+                    }])
+                }
                 break;
             case "unsend":
-                // save to log 
+                /*
+                    unsend
+                    https://developers.line.biz/en/reference/messaging-api/#unsend-event
+                */
+                profile = await line.getProfile(event.source.userId)
+                console.log(`พบ ${profile.displayName} unsend`);
                 break;
-
             case "join":
-                // group message 
-                // welcome message 
+                 /*
+                    join
+                    https://developers.line.biz/en/reference/messaging-api/#join-event
+                */
+                if (event.source.type === "group") {
+                    profile = await line.getProfile(event.source.userId)
+                    await line.replyWithLongLived(event.replyToken, [{
+                        "type": "text",
+                        "text": `สวัสดี เรามาทำความรู้จักกันเถอะ`,
+                        "quickReply": {
+                            "items": [{
+                                "type": "action",
+                                "imageUrl": "https://bucket.ex10.tech/images/9f2a63dc-d84e-11ee-97d4-0242ac12000b/originalContentUrl.png",
+                                "action": {
+                                    "type": "message",
+                                    "label": "สวัสดี",
+                                    "text": "สวัสดี"
+                                }
+                            }]
+                        }
+                    }])
+                }
                 break;
             case "leave":
-                // save to log
-                // delete database 
+                /*
+                    leave
+                    https://developers.line.biz/en/reference/messaging-api/#leave-event
+                */
+                console.log(JSON.stringify(event));
                 break;
             case "memberJoined":
-                // welcome message
+                /*
+                    memberJoined
+                    https://developers.line.biz/en/reference/messaging-api/#member-joined-event
+                */
+                for (let member of event.joined.members) {
+                    if (member.type === "user") {
+                            console.log(JSON.stringify(event));
+                            await line.replyWithLongLived(event.replyToken, [{
+                                "type": "text",
+                                "text": JSON.stringify(event),
+                                "quickReply": {
+                                    "items": [{
+                                        "type": "action",
+                                        "imageUrl": "https://bucket.ex10.tech/images/9f2a63dc-d84e-11ee-97d4-0242ac12000b/originalContentUrl.png",
+                                        "action": {
+                                            "type": "message",
+                                            "label": "สวัสดี",
+                                            "text": "สวัสดี"
+                                        }
+                                    }]
+                                }
+                            }])
+                    }
+                }
                 break;
             case "memberLeft":
-                // save to log
-                // delete database 
+                /*
+                    memberLeft
+                    https://developers.line.biz/en/reference/messaging-api/#member-left-event
+                */
+                console.log(JSON.stringify(event));
                 break;
             case "postback":
-                // spacial data json from flex
+                /*
+                    postback
+                    https://developers.line.biz/en/reference/messaging-api/#postback-event
+                */
+                console.log(event.postback.data);
+                await line.replyWithLongLived(event.replyToken, [{
+                    "type": "text",
+                    "text": JSON.stringify(event.postback.data),
+                }])
                 break;
 
             default:
                 return response.end();
-        }
-
-    }
-
-    return response.end();
-
-});
-
-exports.dialogflow = onRequest(async (request, response) => {
-    // validateWebhook(request, response)
-    const events = request.body.events
-
-    for (const event of events) {
-        switch (event.type) {
-            case "message":
-                // await dialogflow.postToDialogflow(request)
-                break;
-            default:
-                // defult message
-                break;
         }
 
     }
