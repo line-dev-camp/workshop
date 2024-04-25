@@ -11,14 +11,13 @@ const dialogflow = require('./util/dialogflow.util');
 const flex = require('./message/flex');
 
 exports.helloWorld = onRequest((request, response) => {
-    response.send("Hello from Firebase!");
+    response.send(`Method : ${request,method} `);
 });
 
 function validateWebhook(request, response) {
     if (request.method !== "POST") {
         return response.status(405).send("Method Not Allowed");
     }
-
     if (!line.verifySignature(request.headers["x-line-signature"], request.body)) {
         return response.status(401).send("Unauthorized");
     }
@@ -27,11 +26,8 @@ function validateWebhook(request, response) {
 exports.webhook = onRequest(async (request, response) => {
     validateWebhook(request, response)
     const events = request.body.events
-
     for (const event of events) {
-
         let profile = {}
-
         switch (event.type) {
 
             case "follow":
@@ -61,15 +57,29 @@ exports.webhook = onRequest(async (request, response) => {
                 console.log(JSON.stringify(event));
                 break;
             case "message":
-                 /*
+               
+            
+
+                /*
                     Message
                     https://developers.line.biz/en/reference/messaging-api/#message-event
                 */
                 if (event.message.type === "text") {
 
+                    if (event.source.type !== "group") {
+                        // Display a loading animation in one-on-one chats between users and LINE Official Accounts.
+                        await line.isAnimationLoading(event.source.userId)
+                    }
+
+
                     let textMessage = event.message.text
 
-                    if (textMessage === "1") {
+                    if (textMessage === "1") { 
+
+                        console.log([{
+                            "type": "text",
+                            "text": JSON.stringify(event),
+                        }]);
 
                         await line.replyWithLongLived(event.replyToken, [{
                             "type": "text",
@@ -88,8 +98,9 @@ exports.webhook = onRequest(async (request, response) => {
                         await line.replyWithStateless(event.replyToken, [flex.exampleFlex()])
 
                     } else if (textMessage === "4") {
-                        
+
                         profile = await line.getProfile(event.source.userId)
+                        console.log('profile', profile);
                         await line.replyWithStateless(event.replyToken, [flex.examplePostback(JSON.stringify(profile))])
 
                     } else if (textMessage === "สวัสดี") {
@@ -106,13 +117,21 @@ exports.webhook = onRequest(async (request, response) => {
                                         "label": "สวัสดี",
                                         "text": "สวัสดี"
                                     }
+                                }, {
+                                    "type": "action",
+                                    "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
+                                    "action": {
+                                        "type": "clipboard",
+                                        "label": "คัดลองคำ",
+                                        "clipboardText": "สวัสดี"
+                                    }
                                 }]
                             }
                         }])
 
                     } else {
                         /* Foward to Dialogflow */
-                        await dialogflow.postToDialogflow(request)
+                        await dialogflow.forwardDialodflow(request)
                     }
 
                 } else {
@@ -139,28 +158,34 @@ exports.webhook = onRequest(async (request, response) => {
                 console.log(`พบ ${profile.displayName} unsend`);
                 break;
             case "join":
-                 /*
+                /*
                     join
                     https://developers.line.biz/en/reference/messaging-api/#join-event
                 */
-                if (event.source.type === "group") {
-                    profile = await line.getProfile(event.source.userId)
+
                     await line.replyWithLongLived(event.replyToken, [{
                         "type": "text",
-                        "text": `สวัสดี เรามาทำความรู้จักกันเถอะ`,
+                        "text": `ยินดีที่ได้รู้จัก`,
                         "quickReply": {
                             "items": [{
                                 "type": "action",
-                                "imageUrl": "https://bucket.ex10.tech/images/9f2a63dc-d84e-11ee-97d4-0242ac12000b/originalContentUrl.png",
+                                "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
                                 "action": {
                                     "type": "message",
                                     "label": "สวัสดี",
                                     "text": "สวัสดี"
                                 }
+                            }, {
+                                "type": "action",
+                                "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
+                                "action": {
+                                    "type": "clipboard",
+                                    "label": "คัดลองคำ",
+                                    "clipboardText": "สวัสดี"
+                                }
                             }]
                         }
                     }])
-                }
                 break;
             case "leave":
                 /*
@@ -176,22 +201,22 @@ exports.webhook = onRequest(async (request, response) => {
                 */
                 for (let member of event.joined.members) {
                     if (member.type === "user") {
-                            console.log(JSON.stringify(event));
-                            await line.replyWithLongLived(event.replyToken, [{
-                                "type": "text",
-                                "text": JSON.stringify(event),
-                                "quickReply": {
-                                    "items": [{
-                                        "type": "action",
-                                        "imageUrl": "https://bucket.ex10.tech/images/9f2a63dc-d84e-11ee-97d4-0242ac12000b/originalContentUrl.png",
-                                        "action": {
-                                            "type": "message",
-                                            "label": "สวัสดี",
-                                            "text": "สวัสดี"
-                                        }
-                                    }]
-                                }
-                            }])
+                        console.log(JSON.stringify(event));
+                        await line.replyWithLongLived(event.replyToken, [{
+                            "type": "text",
+                            "text": JSON.stringify(event),
+                            "quickReply": {
+                                "items": [{
+                                    "type": "action",
+                                    "imageUrl": "https://bucket.ex10.tech/images/9f2a63dc-d84e-11ee-97d4-0242ac12000b/originalContentUrl.png",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "สวัสดี",
+                                        "text": "สวัสดี"
+                                    }
+                                }]
+                            }
+                        }])
                     }
                 }
                 break;
@@ -219,6 +244,19 @@ exports.webhook = onRequest(async (request, response) => {
         }
 
     }
+
+    return response.end();
+
+});
+
+exports.dialogflow = onRequest(async (request, response) => {
+    
+    /*
+        receive dialogflow
+        bonus
+    */
+    
+    console.log(request);
 
     return response.end();
 

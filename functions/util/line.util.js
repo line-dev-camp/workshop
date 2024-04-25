@@ -1,4 +1,9 @@
 const axios = require("axios");
+const NodeCache = require("node-cache");
+const crypto = require('crypto');
+const cache = new NodeCache({
+  stdTTL: 1800
+}); // 30 min
 
 /*
 #Get profile
@@ -11,24 +16,68 @@ You can get the profile information of users who meet one of two conditions:
 */
 exports.getProfile = async (userId) => {
   try {
-    const url = `${process.env.LINE_MESSAGING_API}/profile/${userId}`;
 
-    const response = await axios.get(url, {
+    let profile = cache.get(userId);
+    console.log(`[Cache Profile] : `, profile);
+
+    if (profile == undefined) {
+
+
+      const url = `${process.env.LINE_MESSAGING_API}/profile/${userId}`;
+
+      const response = await axios.get(url, {
+        headers: {
+          'Authorization': `Bearer ${process.env.LINE_MESSAGING_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        maxBodyLength: Infinity,
+      });
+
+      if (response.status === 200) {
+        console.log(`[getProfile] : ${response.data} `);
+
+        profile = cache.set(userId, response.data);
+        console.log(profile);
+
+
+        profile = response.data;
+
+      } else {
+        throw new Error(`Failed to fetch user profile. API responded with status: ${response.status}`);
+      }
+
+    }
+    return profile
+  } catch (error) {
+    console.error('Error fetching user profile:', error.response ? error.response.data : error.message);
+    throw error;
+  }
+};
+
+/*
+#Display a loading animation
+https://developers.line.biz/en/reference/messaging-api/#send-broadcast-message
+*/
+exports.isAnimationLoading = async (userId) => {
+  try {
+    const url = `${process.env.LINE_MESSAGING_API}/chat/loading/start`;
+    const response = await axios.post(url, {
+      "chatId": `${userId}`,
+      "loadingSeconds": 5 // The default value is 20.
+      // Number of seconds to display a loading animation. You can specify a any one of 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, or 60.
+    }, {
       headers: {
         'Authorization': `Bearer ${process.env.LINE_MESSAGING_ACCESS_TOKEN}`,
         'Content-Type': 'application/json'
-      },
-      maxBodyLength: Infinity,
+      }
     });
-
-    if (response.status === 200) {
-      console.log(`[getProfile] : ${response.data} `);
+    if (response.status === 202) {
       return response.data;
     } else {
-      throw new Error(`Failed to fetch user profile. API responded with status: ${response.status}`);
+      throw new Error(`Failed to send reply. API responded with status: ${response.status}`);
     }
   } catch (error) {
-    console.error('Error fetching user profile:', error.response ? error.response.data : error.message);
+    console.error('Error sending reply:', error.message);
     throw error;
   }
 };
@@ -104,13 +153,11 @@ exports.replyWithStateless = async (token, payload) => {
 */
 async function issueStatelessAccessToken() {
   try {
-    const data = qs.stringify({
+    const response = await axios.post(process.env.LINE_MESSAGING_OAUTH_ISSUE_TOKENV3, {
       grant_type: 'client_credentials',
       client_id: process.env.LINE_MESSAGING_CHANNEL_ID,
       client_secret: process.env.LINE_MESSAGING_CHANNEL_SECRET
-    });
-
-    const response = await axios.post(LINE_MESSAGING_OAUTH_ISSUE_TOKENV3, data, {
+    }, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
       },
@@ -118,7 +165,7 @@ async function issueStatelessAccessToken() {
     });
 
     if (response.status === 200 && response.data && response.data.access_token) {
-      console.log(`[issueStatelessAccessToken] : ${response.data} `);
+      console.log(`[issueStatelessAccessToken] : ${response.data.access_token} `);
       return response.data.access_token;
     } else {
       throw new Error('Failed to obtain access token, check response for details.');
@@ -137,15 +184,13 @@ https://medium.com/linedevth/7a94d9548f34
 When your bot server receives a request, verify the request sender. To make sure the request is from the LINE Platform, make your bot server verify the signature in the x-line-signature request header.
 */
 exports.verifySignature = (originalSignature, body) => {
-
   const signature = crypto
-      .createHmac("SHA256", process.env.LINE_MESSAGING_CHANNEL_SECRET)
-      .update(JSON.stringify(body))
-      .digest("base64");
+    .createHmac("SHA256", process.env.LINE_MESSAGING_CHANNEL_SECRET)
+    .update(JSON.stringify(body))
+    .digest("base64");
 
   if (signature !== originalSignature) {
-      functions.logger.error("Unauthorized");
-      return false;
+    return false;
   }
   return true;
 };
