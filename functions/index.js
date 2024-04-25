@@ -24,7 +24,7 @@ exports.helloWorld = onRequest((request, response) => {
 
 function validateWebhook(request, response) {
     if (request.method !== "POST") {
-        return response.status(405).send("Method Not Allowed");
+        return response.status(200).send("Method Not Allowed");
     }
     if (!line.verifySignature(request.headers["x-line-signature"], request.body)) {
         return response.status(401).send("Unauthorized");
@@ -36,6 +36,12 @@ exports.webhook = onRequest(async (request, response) => {
     const events = request.body.events
     for (const event of events) {
         let profile = {}
+
+
+        console.log("event", JSON.stringify(event));
+        if (event.source.userId === "Udeadbeefdeadbeefdeadbeefdeadbeef") {
+            return response.status(200).end();
+        }
         switch (event.type) {
 
             case "follow":
@@ -65,8 +71,8 @@ exports.webhook = onRequest(async (request, response) => {
                 console.log(JSON.stringify(event));
                 break;
             case "message":
-               
-            
+
+
 
                 /*
                     Message
@@ -74,25 +80,33 @@ exports.webhook = onRequest(async (request, response) => {
                 */
                 if (event.message.type === "text") {
 
-                    if (event.source.type !== "group") {
-                        // Display a loading animation in one-on-one chats between users and LINE Official Accounts.
-                        await line.isAnimationLoading(event.source.userId)
-                    }
+                    // if (event.source.type !== "group") {
+                    //     // Display a loading animation in one-on-one chats between users and LINE Official Accounts.
+                    //     await line.isAnimationLoading(event.source.userId)
+                    // }
 
 
                     let textMessage = event.message.text
 
-                    if (textMessage === "1") { 
+                    if (textMessage === "1") {
 
                         console.log([{
                             "type": "text",
                             "text": JSON.stringify(event),
                         }]);
 
-                        await line.replyWithLongLived(event.replyToken, [{
-                            "type": "text",
-                            "text": JSON.stringify(event),
-                        }])
+                        // await line.replyWithLongLived(event.replyToken, [{
+                        //     "type": "text",
+                        //     "text": JSON.stringify(event),
+                        // }])
+                        let data = JSON.stringify({
+                            "replyToken": `${event.replyToken}`,
+                            "messages": [{
+                                "type": "text",
+                                "text": JSON.stringify(event),
+                            }]
+                        });
+                        response.status(200).send(data)
 
                     } else if (textMessage === "2") {
 
@@ -111,7 +125,7 @@ exports.webhook = onRequest(async (request, response) => {
                         console.log('profile', profile);
                         await line.replyWithStateless(event.replyToken, [flex.examplePostback(JSON.stringify(profile))])
 
-                    } else if (textMessage === "สวัสดี") {
+                    } else if (textMessage === "ทักทาย") {
 
                         await line.replyWithStateless(event.replyToken, [{
                             "type": "text",
@@ -151,9 +165,22 @@ exports.webhook = onRequest(async (request, response) => {
                     - Location : https://developers.line.biz/en/reference/messaging-api/#location-message
                     - Sticker : https://developers.line.biz/en/reference/messaging-api/#sticker-message
                     */
+
+                    /*
+                        https://medium.com/linedevth/111ea6c17ada
+                    */ 
+                    let msg = JSON.stringify(event)
+
+                    // const validateEventType = ['image', 'audio', 'video', 'file']
+                    // if (validateEventType.includes(event.message.type)) {
+                    //     const binary = await line.getContent(event.message,event.message.id)
+                    //     console.log("binary ", binary.fileName);
+                    //     msg = binary.fileName
+                    // }
+
                     await line.replyWithLongLived(event.replyToken, [{
                         "type": "text",
-                        "text": JSON.stringify(event),
+                        "text": msg,
                     }])
                 }
                 break;
@@ -171,29 +198,29 @@ exports.webhook = onRequest(async (request, response) => {
                     https://developers.line.biz/en/reference/messaging-api/#join-event
                 */
 
-                    await line.replyWithLongLived(event.replyToken, [{
-                        "type": "text",
-                        "text": `ยินดีที่ได้รู้จัก`,
-                        "quickReply": {
-                            "items": [{
-                                "type": "action",
-                                "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
-                                "action": {
-                                    "type": "message",
-                                    "label": "สวัสดี",
-                                    "text": "สวัสดี"
-                                }
-                            }, {
-                                "type": "action",
-                                "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
-                                "action": {
-                                    "type": "clipboard",
-                                    "label": "คัดลองคำ",
-                                    "clipboardText": "สวัสดี"
-                                }
-                            }]
-                        }
-                    }])
+                await line.replyWithLongLived(event.replyToken, [{
+                    "type": "text",
+                    "text": `ยินดีที่ได้รู้จัก`,
+                    "quickReply": {
+                        "items": [{
+                            "type": "action",
+                            "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
+                            "action": {
+                                "type": "message",
+                                "label": "สวัสดี",
+                                "text": "สวัสดี"
+                            }
+                        }, {
+                            "type": "action",
+                            "imageUrl": "https://bucket.ex10.tech/images/06960db7-fd91-11ee-808f-0242ac12000b/originalContentUrl.png",
+                            "action": {
+                                "type": "clipboard",
+                                "label": "คัดลองคำ",
+                                "clipboardText": "สวัสดี"
+                            }
+                        }]
+                    }
+                }])
                 break;
             case "leave":
                 /*
@@ -258,14 +285,18 @@ exports.webhook = onRequest(async (request, response) => {
 });
 
 exports.dialogflow = onRequest(async (request, response) => {
-    
+
     /*
         receive dialogflow
         bonus
     */
-    
-    console.log(request);
+    const object = request.body
+    const replyToken = object.originalDetectIntentRequest.payload.data.replyToken
 
+    await line.replyWithLongLived(replyToken, [{
+        "type": "text",
+        "text": JSON.stringify(object.originalDetectIntentRequest),
+    }])
     return response.end();
 
 });

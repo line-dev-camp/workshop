@@ -1,9 +1,7 @@
 const axios = require("axios");
 const NodeCache = require("node-cache");
 const crypto = require('crypto');
-const cache = new NodeCache({
-  stdTTL: 1800
-}); // 30 min
+const cache = new NodeCache({stdTTL: 1800}); // 30 min
 
 /*
 #Get profile
@@ -194,3 +192,51 @@ exports.verifySignature = (originalSignature, body) => {
   }
   return true;
 };
+
+/*
+#Get content
+https://developers.line.biz/en/reference/messaging-api/#get-content
+ This domain name is different from that of other endpoints
+The domain name (api-data.line.me) of this endpoint is for sending and receiving large amounts of data in the LINE Platform for Messaging API. This domain name differs from that of other endpoints (api.line.me).
+*/
+exports.getContent = async (message, messageId) => {
+  const url = `${process.env.LINE_DATA_MESSAGING_API}/message/${messageId}/content`;
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${process.env.LINE_MESSAGING_ACCESS_TOKEN}`,
+    },
+    responseType: 'arraybuffer',
+  });
+
+  let extension = getExtension(message, message.type)
+  let resObject = {
+    fileName: `${message.id}.${extension}`,
+    binary: response.data
+  }
+  return resObject
+};
+
+
+function getExtension(message, messageType) {
+  let extension = '';
+  switch (messageType) {
+    case "image":
+      extension = 'png';
+      break;
+    case "video":
+      extension = 'mp4';
+      break;
+    case "audio":
+      extension = 'm4a';
+      break;
+    case "file":
+      const regex = /\.([0-9a-z]+)(?:[\?#]|$)/i;
+      const match = regex.exec(message.fileName);
+      extension = match ? match[1] : '';
+      break;
+  }
+
+  return extension
+
+}
+
