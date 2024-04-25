@@ -1,3 +1,9 @@
+/*
+Cloud Functions for Firebase 2nd Gen
+https://medium.com/firebasethailand/cdda33bbd7dd
+
+*/
+
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onRequest } = require("firebase-functions/v2/https");
 setGlobalOptions({
@@ -5,6 +11,8 @@ setGlobalOptions({
     memory: "1GB",
     concurrency: 40,
 })
+
+
 
 const line = require('./util/line.util');
 const dialogflow = require('./util/dialogflow.util');
