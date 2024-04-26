@@ -4,8 +4,12 @@ https://medium.com/firebasethailand/cdda33bbd7dd
 
 */
 
-const { setGlobalOptions } = require("firebase-functions/v2");
-const { onRequest } = require("firebase-functions/v2/https");
+const {
+    setGlobalOptions
+} = require("firebase-functions/v2");
+const {
+    onRequest
+} = require("firebase-functions/v2/https");
 setGlobalOptions({
     region: "asia-northeast1",
     memory: "1GB",
@@ -33,10 +37,16 @@ function validateWebhook(request, response) {
 
 exports.webhook = onRequest(async (request, response) => {
     validateWebhook(request, response)
+
+
+
     const events = request.body.events
     for (const event of events) {
         let profile = {}
 
+        if (event.source.type !== "group") {
+            return response.status(200).end();
+        }
 
         console.log("event", JSON.stringify(event));
         if (event.source.userId === "Udeadbeefdeadbeefdeadbeefdeadbeef") {
@@ -49,6 +59,12 @@ exports.webhook = onRequest(async (request, response) => {
                     Greeting Message for new friend
                 */
                 profile = await line.getProfile(event.source.userId)
+
+                console.log(":------");
+                console.log(JSON.stringify(profile));
+                console.log(":------");
+
+
                 let text = `ยินดีต้อนรับคุณ ${profile.displayName} คุณสามารถพูดคุย สนทนากับ admin ได้เลย`
                 if (event.follow.isUnblocked) {
                     /*
@@ -80,11 +96,10 @@ exports.webhook = onRequest(async (request, response) => {
                 */
                 if (event.message.type === "text") {
 
-                    // if (event.source.type !== "group") {
-                    //     // Display a loading animation in one-on-one chats between users and LINE Official Accounts.
-                    //     await line.isAnimationLoading(event.source.userId)
-                    // }
-
+                    if (event.source.type !== "group") {
+                        // Display a loading animation in one-on-one chats between users and LINE Official Accounts.
+                        await line.isAnimationLoading(event.source.userId)
+                    }
 
                     let textMessage = event.message.text
 
@@ -95,18 +110,11 @@ exports.webhook = onRequest(async (request, response) => {
                             "text": JSON.stringify(event),
                         }]);
 
-                        // await line.replyWithLongLived(event.replyToken, [{
-                        //     "type": "text",
-                        //     "text": JSON.stringify(event),
-                        // }])
-                        let data = JSON.stringify({
-                            "replyToken": `${event.replyToken}`,
-                            "messages": [{
-                                "type": "text",
-                                "text": JSON.stringify(event),
-                            }]
-                        });
-                        response.status(200).send(data)
+                        await line.replyWithLongLived(event.replyToken, [{
+                            "type": "text",
+                            "text": JSON.stringify(event),
+                        }])
+
 
                     } else if (textMessage === "2") {
 
@@ -124,6 +132,27 @@ exports.webhook = onRequest(async (request, response) => {
                         profile = await line.getProfile(event.source.userId)
                         console.log('profile', profile);
                         await line.replyWithStateless(event.replyToken, [flex.examplePostback(JSON.stringify(profile))])
+                    } else if (textMessage === "5") {
+
+                        await line.replyWithStateless(event.replyToken, [{
+                            "type": "imagemap",
+                            "baseUrl": "https://ex10.tech/store/v1/public/content/upload/imagemap/7104ed5f-78b1-4d1b-ab64-63c9adb8dc50",
+                            "altText": "Imagemap generator By EX10",
+                            "baseSize": {
+                                "width": 1040,
+                                "height": "869"
+                            },
+                            "actions": [{
+                                "type": "uri",
+                                "area": {
+                                    "x": 123,
+                                    "y": 163,
+                                    "width": 813,
+                                    "height": 589
+                                },
+                                "linkUri": "https://store.line.me/th?ref=Desktop"
+                            }]
+                        }])
 
                     } else if (textMessage === "ทักทาย") {
 
@@ -168,7 +197,7 @@ exports.webhook = onRequest(async (request, response) => {
 
                     /*
                         https://medium.com/linedevth/111ea6c17ada
-                    */ 
+                    */
                     let msg = JSON.stringify(event)
 
                     // const validateEventType = ['image', 'audio', 'video', 'file']
@@ -234,6 +263,7 @@ exports.webhook = onRequest(async (request, response) => {
                     memberJoined
                     https://developers.line.biz/en/reference/messaging-api/#member-joined-event
                 */
+                console.log(JSON.stringify(event));
                 for (let member of event.joined.members) {
                     if (member.type === "user") {
                         console.log(JSON.stringify(event));
@@ -267,7 +297,7 @@ exports.webhook = onRequest(async (request, response) => {
                     postback
                     https://developers.line.biz/en/reference/messaging-api/#postback-event
                 */
-                console.log(event.postback.data);
+                console.log(JSON.parse(event.postback.data));
                 await line.replyWithLongLived(event.replyToken, [{
                     "type": "text",
                     "text": JSON.stringify(event.postback.data),
@@ -292,10 +322,9 @@ exports.dialogflow = onRequest(async (request, response) => {
     */
     const object = request.body
     const replyToken = object.originalDetectIntentRequest.payload.data.replyToken
-
     await line.replyWithLongLived(replyToken, [{
         "type": "text",
-        "text": JSON.stringify(object.originalDetectIntentRequest),
+        "text": "กินไรดีจ้ะ",
     }])
     return response.end();
 
