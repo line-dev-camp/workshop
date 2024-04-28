@@ -80,3 +80,5 @@ firebase deploy
 ## 🚀 About Me
 Thepnatee Phojan : LINE API Expert 🇹🇭 
 
+Blog : [medium](https://thepnateephojan.medium.com)
+
