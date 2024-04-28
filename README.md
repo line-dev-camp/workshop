@@ -33,7 +33,7 @@ cd workshop
 ````
 {
   "projects": {
-    "default": "Project Name from "
+    "default": "Project Name from Firebase Project"
   }
 }
 
