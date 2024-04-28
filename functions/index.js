@@ -200,12 +200,14 @@ exports.webhook = onRequest(async (request, response) => {
                     */
                     let msg = JSON.stringify(event)
 
-                    // const validateEventType = ['image', 'audio', 'video', 'file']
-                    // if (validateEventType.includes(event.message.type)) {
-                    //     const binary = await line.getContent(event.message,event.message.id)
-                    //     console.log("binary ", binary.fileName);
-                    //     msg = binary.fileName
-                    // }
+                    const validateEventType = ['image', 'audio', 'video', 'file']
+                    if (validateEventType.includes(event.message.type)) {
+                        const resGetContent = await line.getContent(event.message,event.message.id)
+                        console.log("binary ", binary.fileName);
+                        msg = resGetContent.fileName
+                        // todo save binary to firestore
+                        // binary = resGetContent.binary
+                    }
 
                     await line.replyWithLongLived(event.replyToken, [{
                         "type": "text",
