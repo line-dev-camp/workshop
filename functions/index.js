@@ -4,12 +4,8 @@ https://medium.com/firebasethailand/cdda33bbd7dd
 
 */
 
-const {
-    setGlobalOptions
-} = require("firebase-functions/v2");
-const {
-    onRequest
-} = require("firebase-functions/v2/https");
+const {  setGlobalOptions } = require("firebase-functions/v2");
+const { onRequest } = require("firebase-functions/v2/https");
 setGlobalOptions({
     region: "asia-northeast1",
     memory: "1GB",
@@ -20,6 +16,7 @@ setGlobalOptions({
 
 const line = require('./util/line.util');
 const dialogflow = require('./util/dialogflow.util');
+const firebase = require('./util/firebase.util');
 const flex = require('./message/flex');
 
 exports.helloWorld = onRequest((request, response) => {
@@ -200,13 +197,20 @@ exports.webhook = onRequest(async (request, response) => {
                     */
                     let msg = JSON.stringify(event)
 
-                    const validateEventType = ['image', 'audio', 'video', 'file']
-                    if (validateEventType.includes(event.message.type)) {
-                        const resGetContent = await line.getContent(event.message,event.message.id)
-                        console.log("binary ", binary.fileName);
-                        msg = resGetContent.fileName
-                        // todo save binary to firestore
-                        // binary = resGetContent.binary
+                    if (event.source.type === "group") {
+
+                        const validateEventType = ['image', 'audio', 'video', 'file']
+                        if (validateEventType.includes(event.message.type)) {
+                            const resGetContent = await line.getContent(event.message, event.message.id)
+                            console.log("binary ", binary.fileName);
+                            // fileName = resGetContent.fileName
+                            // todo save binary to firestore
+                            binary = resGetContent.binary
+                            
+                            const publicUrl = await firebase.saveImageToStorage( event.source.groupId,resGetContent.fileName,resGetContent.binary)
+                            await firebase.insertImageGroup(event.source.groupId, event.message.id, publicUrl)
+                            msg = publicUrl
+                        }
                     }
 
                     await line.replyWithLongLived(event.replyToken, [{
