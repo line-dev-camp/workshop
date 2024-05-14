@@ -60,17 +60,18 @@ npm install
 ````
 mv .env.example .env
 ````
-8. Run Project
-
-````
-firebase emulators:start
-````
 ## Edit .env
 
     1. LINE_MESSAGING_CHANNEL_ID= 'LINE Developer Console'
     2. LINE_MESSAGING_CHANNEL_SECRET='LINE Developer Console'
     3. LINE_MESSAGING_ACCESS_TOKEN='LINE Developer Console'
     4. DIALOGFLOW_AGENT_ID='Dialogflow Integration Service (Webhook Id)'
+
+8. Run Project
+
+````
+firebase emulators:start
+````
 
 -----
 ##  Deploy : 
