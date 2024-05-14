@@ -44,6 +44,13 @@ cd workshop
 cd functions
 ````
 6. Installation Package
+  1.axios
+  2.firebase-admin
+  3.firebase-functions
+  4.node-cache
+  5.@google-cloud/storage
+  6.moment-timezone
+
 ````
 npm install
 ````
