@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@google-cloud/storage": "^7.10.2",
-    "moment-timezone": "^0.5.45"
-  }
-}
