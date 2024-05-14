@@ -60,7 +60,7 @@ npm install
 ````
 mv .env.example .env
 ````
-## Edit .env
+Edit .env
 
     1. LINE_MESSAGING_CHANNEL_ID= 'LINE Developer Console'
     2. LINE_MESSAGING_CHANNEL_SECRET='LINE Developer Console'
