@@ -41,10 +41,6 @@ exports.webhook = onRequest(async (request, response) => {
     for (const event of events) {
         let profile = {}
 
-        if (event.source.type !== "group") {
-            return response.status(200).end();
-        }
-
         console.log("event", JSON.stringify(event));
         if (event.source.userId === "Udeadbeefdeadbeefdeadbeefdeadbeef") {
             return response.status(200).end();
